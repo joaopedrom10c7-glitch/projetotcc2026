@@ -1,42 +1,51 @@
-import { getDb } from '../db/connection.js';
+import { db } from '../db/index.js';
+import { flashcards } from '../db/schema.js';
 import { validateFlashcard } from '../middleware/validateRequest.js';
+import { and, or, eq, ilike, desc } from 'drizzle-orm';
+
+function formatFlashcard(card) {
+  if (!card) return card;
+  return {
+    ...card,
+    created_at: card.createdAt,
+    updated_at: card.updatedAt,
+  };
+}
 
 export async function listFlashcards(req, res, next) {
   try {
-    const sql = getDb();
     const { search, subject } = req.query;
-
-    let results;
+    let whereCondition;
 
     if (search && subject) {
       const searchPattern = `%${search}%`;
-      results = await sql`
-        SELECT * FROM flashcards
-        WHERE subject = ${subject}
-          AND (question ILIKE ${searchPattern} OR answer ILIKE ${searchPattern} OR subject ILIKE ${searchPattern})
-        ORDER BY created_at DESC
-      `;
+      whereCondition = and(
+        eq(flashcards.subject, subject),
+        or(
+          ilike(flashcards.question, searchPattern),
+          ilike(flashcards.answer, searchPattern),
+          ilike(flashcards.subject, searchPattern)
+        )
+      );
     } else if (search) {
       const searchPattern = `%${search}%`;
-      results = await sql`
-        SELECT * FROM flashcards
-        WHERE question ILIKE ${searchPattern} OR answer ILIKE ${searchPattern} OR subject ILIKE ${searchPattern}
-        ORDER BY created_at DESC
-      `;
+      whereCondition = or(
+        ilike(flashcards.question, searchPattern),
+        ilike(flashcards.answer, searchPattern),
+        ilike(flashcards.subject, searchPattern)
+      );
     } else if (subject) {
-      results = await sql`
-        SELECT * FROM flashcards
-        WHERE subject = ${subject}
-        ORDER BY created_at DESC
-      `;
-    } else {
-      results = await sql`
-        SELECT * FROM flashcards
-        ORDER BY created_at DESC
-      `;
+      whereCondition = eq(flashcards.subject, subject);
     }
 
-    res.json({ data: results });
+    const query = db
+      .select()
+      .from(flashcards)
+      .orderBy(desc(flashcards.createdAt));
+
+    const results = whereCondition ? await query.where(whereCondition) : await query;
+
+    res.json({ data: results.map(formatFlashcard) });
   } catch (error) {
     next(error);
   }
@@ -44,16 +53,23 @@ export async function listFlashcards(req, res, next) {
 
 export async function getFlashcard(req, res, next) {
   try {
-    const sql = getDb();
     const { id } = req.params;
+    const cardId = Number(id);
 
-    const results = await sql`SELECT * FROM flashcards WHERE id = ${id}`;
+    if (isNaN(cardId)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
 
-    if (results.length === 0) {
+    const [card] = await db
+      .select()
+      .from(flashcards)
+      .where(eq(flashcards.id, cardId));
+
+    if (!card) {
       return res.status(404).json({ error: 'Flashcard não encontrado' });
     }
 
-    res.json({ data: results[0] });
+    res.json({ data: formatFlashcard(card) });
   } catch (error) {
     next(error);
   }
@@ -66,16 +82,18 @@ export async function createFlashcard(req, res, next) {
       return res.status(400).json({ error: 'Dados inválidos', details: errors });
     }
 
-    const sql = getDb();
     const { subject, question, answer } = req.body;
 
-    const results = await sql`
-      INSERT INTO flashcards (subject, question, answer)
-      VALUES (${subject.trim()}, ${question.trim()}, ${answer.trim()})
-      RETURNING *
-    `;
+    const [newCard] = await db
+      .insert(flashcards)
+      .values({
+        subject: subject.trim(),
+        question: question.trim(),
+        answer: answer.trim(),
+      })
+      .returning();
 
-    res.status(201).json({ data: results[0] });
+    res.status(201).json({ data: formatFlashcard(newCard) });
   } catch (error) {
     next(error);
   }
@@ -84,36 +102,42 @@ export async function createFlashcard(req, res, next) {
 export async function updateFlashcard(req, res, next) {
   try {
     const { id } = req.params;
+    const cardId = Number(id);
+
+    if (isNaN(cardId)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
     const { subject, question, answer } = req.body;
 
     if (!subject && !question && !answer) {
       return res.status(400).json({ error: 'É necessário fornecer pelo menos um campo para atualizar' });
     }
 
-    const sql = getDb();
+    const [existing] = await db
+      .select()
+      .from(flashcards)
+      .where(eq(flashcards.id, cardId));
 
-    const existing = await sql`SELECT * FROM flashcards WHERE id = ${id}`;
-    if (existing.length === 0) {
+    if (!existing) {
       return res.status(404).json({ error: 'Flashcard não encontrado' });
     }
 
-    const updated = {
-      subject: subject !== undefined ? subject.trim() : existing[0].subject,
-      question: question !== undefined ? question.trim() : existing[0].question,
-      answer: answer !== undefined ? answer.trim() : existing[0].answer,
+    const updateData = {
+      updatedAt: new Date(),
     };
 
-    const results = await sql`
-      UPDATE flashcards
-      SET subject = ${updated.subject},
-          question = ${updated.question},
-          answer = ${updated.answer},
-          updated_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
+    if (subject !== undefined) updateData.subject = subject.trim();
+    if (question !== undefined) updateData.question = question.trim();
+    if (answer !== undefined) updateData.answer = answer.trim();
 
-    res.json({ data: results[0] });
+    const [updatedCard] = await db
+      .update(flashcards)
+      .set(updateData)
+      .where(eq(flashcards.id, cardId))
+      .returning();
+
+    res.json({ data: formatFlashcard(updatedCard) });
   } catch (error) {
     next(error);
   }
@@ -121,19 +145,26 @@ export async function updateFlashcard(req, res, next) {
 
 export async function deleteFlashcard(req, res, next) {
   try {
-    const sql = getDb();
     const { id } = req.params;
+    const cardId = Number(id);
 
-    const existing = await sql`SELECT * FROM flashcards WHERE id = ${id}`;
-    if (existing.length === 0) {
+    if (isNaN(cardId)) {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const [existing] = await db
+      .select()
+      .from(flashcards)
+      .where(eq(flashcards.id, cardId));
+
+    if (!existing) {
       return res.status(404).json({ error: 'Flashcard não encontrado' });
     }
 
-    await sql`DELETE FROM flashcards WHERE id = ${id}`;
+    await db.delete(flashcards).where(eq(flashcards.id, cardId));
 
     res.status(204).send();
   } catch (error) {
     next(error);
   }
 }
-

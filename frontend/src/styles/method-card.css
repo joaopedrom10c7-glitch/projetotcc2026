@@ -2,11 +2,11 @@
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1.75rem 1.625rem;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-apple);
   text-decoration: none;
   position: relative;
   overflow: hidden;
@@ -17,69 +17,74 @@
 }
 
 .method-card--active:hover {
-  border-color: var(--color-primary-border);
-  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-card-hover);
   transform: translateY(-3px);
 }
 
 .method-card--active:hover .method-action-arrow {
-  color: var(--color-primary);
+  color: var(--color-text-main);
   transform: translateX(4px);
 }
 
 .method-card--disabled {
-  background-color: #f8fafc;
-  opacity: 0.75;
-  cursor: not-allowed;
-  border-style: dashed;
+  background-color: rgba(247, 245, 240, 0.6);
+  border-style: solid;
+  border-color: var(--color-border);
+  opacity: 0.72;
+  cursor: default;
 }
 
 .method-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 1.125rem;
 }
 
 .method-icon {
-  font-size: 2rem;
+  font-size: 1.875rem;
   line-height: 1;
 }
 
 .method-action-arrow {
-  font-size: 1.25rem;
-  color: var(--color-text-subtle);
-  font-weight: 700;
-  transition: all var(--transition-fast);
+  font-size: 1.125rem;
+  color: var(--color-text-light);
+  font-weight: 400;
+  transition: var(--transition-apple);
 }
 
 .method-badge {
-  background-color: #e2e8f0;
-  color: #475569;
+  background-color: var(--color-tag-bege-bg);
+  color: var(--color-tag-bege-text);
+  border: 1px solid var(--color-tag-bege-border);
   font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius-full);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.625rem;
+  border-radius: var(--radius-pill);
 }
 
 .method-title {
-  font-size: 1.125rem;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin-bottom: 0.5rem;
+  color: var(--color-text-main);
 }
 
 .method-description {
   font-size: 0.875rem;
   color: var(--color-text-muted);
-  line-height: 1.45;
-  margin-bottom: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+  font-weight: 400;
 }
 
 .method-status-text {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-subtle);
   margin-top: auto;
+  letter-spacing: -0.01em;
 }
-

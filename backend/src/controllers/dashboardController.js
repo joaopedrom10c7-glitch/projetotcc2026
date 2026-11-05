@@ -1,34 +1,35 @@
-import { getDb } from '../db/connection.js';
+import { db } from '../db/index.js';
+import { studySessions } from '../db/schema.js';
+import { sql } from 'drizzle-orm';
 
 export async function getDashboard(req, res, next) {
   try {
-    const sql = getDb();
+    const [todayStats] = await db
+      .select({
+        sessions_today: sql`COUNT(*)::int`,
+        minutes_today: sql`COALESCE(SUM(${studySessions.durationMinutes}), 0)::int`,
+      })
+      .from(studySessions)
+      .where(
+        sql`(${studySessions.completedAt} AT TIME ZONE 'America/Sao_Paulo')::date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date`
+      );
 
-    const todayStats = await sql`
-      SELECT
-        COUNT(*)::int AS sessions_today,
-        COALESCE(SUM(duration_minutes), 0)::int AS minutes_today
-      FROM study_sessions
-      WHERE (completed_at AT TIME ZONE 'America/Sao_Paulo')::date = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
-    `;
-
-    const totalStats = await sql`
-      SELECT
-        COUNT(*)::int AS total_sessions,
-        COALESCE(SUM(duration_minutes), 0)::int AS total_minutes
-      FROM study_sessions
-    `;
+    const [totalStats] = await db
+      .select({
+        total_sessions: sql`COUNT(*)::int`,
+        total_minutes: sql`COALESCE(SUM(${studySessions.durationMinutes}), 0)::int`,
+      })
+      .from(studySessions);
 
     res.json({
       data: {
-        sessions_today: todayStats[0].sessions_today,
-        minutes_today: todayStats[0].minutes_today,
-        total_sessions: totalStats[0].total_sessions,
-        total_minutes: totalStats[0].total_minutes,
+        sessions_today: todayStats?.sessions_today ?? 0,
+        minutes_today: todayStats?.minutes_today ?? 0,
+        total_sessions: totalStats?.total_sessions ?? 0,
+        total_minutes: totalStats?.total_minutes ?? 0,
       },
     });
   } catch (error) {
     next(error);
   }
 }
-
