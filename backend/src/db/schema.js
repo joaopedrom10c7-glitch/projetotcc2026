@@ -10,7 +10,6 @@ import {
   check,
 } from 'drizzle-orm/pg-core';
 
-// Tabela de Flashcards
 export const flashcards = pgTable(
   'flashcards',
   {
@@ -26,7 +25,6 @@ export const flashcards = pgTable(
   (table) => [index('idx_flashcards_subject').on(table.subject)],
 );
 
-// Tabela de Sessões de Estudo
 export const studySessions = pgTable(
   'study_sessions',
   {
