@@ -1,9 +1,9 @@
 const DEFAULT_API_URL = "https://projetotcc2026.onrender.com";
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL_LOCAL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 
 async function request(endpoint, options = {}) {
-  const url = `${API_URL}${endpoint}`;
+  const url = `${DEFAULT_API_URL}${endpoint}`;
   const config = {
     headers: {
       'Content-Type': 'application/json',
