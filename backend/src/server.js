@@ -8,9 +8,13 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://projetotcc2026.vercel.app";
+const origensPermitidas = [
+  "https://projetotcc2026.vercel.app",
+  'http://localhost:5173'
+];
 
-app.use(cors({ origin: FRONTEND_URL }));
+
+app.use(cors({ origin: origensPermitidas }));
 app.use(express.json());
 
 app.use('/api', routes);
